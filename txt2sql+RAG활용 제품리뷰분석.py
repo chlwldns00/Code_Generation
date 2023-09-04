@@ -13,12 +13,22 @@ from sqlalchemy import insert
 from llama_index.indices.struct_store.sql_query import NLSQLTableQueryEngine
 from llama_index import Document, ListIndex
 from llama_index import SQLDatabase, ServiceContext
-from llama_index.llms import ChatMessage, OpenAI
+from llama_index.llms import ChatMessage, OpenAI, CustomLLM
 from typing import List
 import ast
-import openai
 from IPython.display import display, HTML
+#from llama_index.llms import llm
 
+
+
+import os
+import openai
+openai.organization = "org-YRfAQcPdULRiZ9FLQpYTRJjZ"
+openai.api_key = os.getenv("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")
+openai.Model.list()
+
+
+#예제 데이터
 rows = [
     # iPhone13 Reviews
     {"category": "Phone", "product_name": "Iphone13", "review": "The iPhone13 is a stellar leap forward. From its sleek design to the crystal-clear display, it screams luxury and functionality. Coupled with the enhanced battery life and an A15 chip, it's clear Apple has once again raised the bar in the smartphone industry."},
@@ -35,6 +45,7 @@ rows = [
     {"category": "Furniture", "product_name": "Ergonomic Chair", "review": "The meticulous craftsmanship of this chair is evident. Every component, from the armrests to the wheels, feels premium. The adjustability features mean I can tailor it to my needs, ensuring optimal posture and comfort throughout the day."},
     {"category": "Furniture", "product_name": "Ergonomic Chair", "review": "I was initially drawn to its aesthetic appeal, but the functional benefits have been profound. The breathable material ensures no discomfort even after prolonged use, and the robust build gives me confidence that it's a chair built to last."},
 ]
+
 
 engine = create_engine("sqlite:///:memory:")
 metadata_obj = MetaData()
@@ -58,3 +69,98 @@ for row in rows:
     with engine.connect() as connection:
         cursor = connection.execute(stmt)
         connection.commit()
+
+
+
+
+
+
+def generate_questions(user_query: str) -> List[str]:
+  system_message = '''
+  You are given with Postgres table with the following columns.
+
+  city_name, population, country, reviews.
+
+  Your task is to decompose the given question into the following two questions.
+
+  1. Question in natural language that needs to be asked to retrieve results from the table.
+  2. Question that needs to be asked on the top of the result from the first question to provide the final answer.
+
+  Example:
+
+  Input:
+  How is the culture of countries whose population is more than 5000000
+
+  Output:
+  1. Get the reviews of countries whose population is more than 5000000
+  2. Provide the culture of countries
+  '''
+
+  messages = [
+      ChatMessage(role="system", content=system_message),
+      ChatMessage(role="user", content=user_query),
+  ]
+  generated_questions = CustomLLM.chat(messages).message.content.split('\n')
+
+  return generated_questions
+
+user_query = "Get the summary of reviews of Iphone13"
+
+text_to_sql_query, rag_query = generate_questions(user_query)
+
+
+
+service_context = ServiceContext(
+    model=OpenAI("gpt-3.5-turbo"),
+    organization="org-YRfAQcPdULRiZ9FLQpYTRJjZ",  # OpenAI 조직 ID
+)
+
+
+sql_query_engine = NLSQLTableQueryEngine(
+    sql_database=sql_database,
+    tables=["product_reviews"],
+    synthesize_response=False,
+    service_context=service_context
+)
+
+
+sql_response = sql_query_engine.query(text_to_sql_query)
+
+
+sql_response_list = ast.literal_eval(sql_response.response)
+text = [' '.join(t) for t in sql_response_list]
+text = ' '.join(text)
+
+
+listindex = ListIndex([Document(text=text)])
+list_query_engine = listindex.as_query_engine()
+
+response = list_query_engine.query(rag_query)
+
+print(response.response)
+
+
+
+"""Function to perform SQL+RAG"""
+
+def sql_rag(user_query: str) -> str:
+  text_to_sql_query, rag_query = generate_questions(user_query)
+
+  sql_response = sql_query_engine.query(text_to_sql_query)
+
+  sql_response_list = ast.literal_eval(sql_response.response)
+
+  text = [' '.join(t) for t in sql_response_list]
+  text = ' '.join(text)
+
+  listindex = ListIndex([Document(text=text)])
+  list_query_engine = listindex.as_query_engine()
+
+  summary = list_query_engine.query(rag_query)
+
+  return summary.response
+
+
+
+#main
+sql_rag("How is the sentiment of SamsungTV product?")

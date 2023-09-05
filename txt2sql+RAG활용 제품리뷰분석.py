@@ -13,40 +13,87 @@ from sqlalchemy import insert
 from llama_index.indices.struct_store.sql_query import NLSQLTableQueryEngine
 from llama_index import Document, ListIndex
 from llama_index import SQLDatabase, ServiceContext
-from llama_index.llms import ChatMessage, OpenAI, CustomLLM
+from llama_index.llms import ChatMessage, OpenAI
 from typing import List
 import ast
 from IPython.display import display, HTML
 #from llama_index.llms import llm
-
-
-
 import os
 import openai
-openai.organization = "org-YRfAQcPdULRiZ9FLQpYTRJjZ"
-openai.api_key = os.getenv("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")
-openai.Model.list()
+import nltk
 
 
 #예제 데이터
 rows = [
     # iPhone13 Reviews
-    {"category": "Phone", "product_name": "Iphone13", "review": "The iPhone13 is a stellar leap forward. From its sleek design to the crystal-clear display, it screams luxury and functionality. Coupled with the enhanced battery life and an A15 chip, it's clear Apple has once again raised the bar in the smartphone industry."},
-    {"category": "Phone", "product_name": "Iphone13", "review": "This model brings the brilliance of the ProMotion display, changing the dynamics of screen interaction. The rich colors, smooth transitions, and lag-free experience make daily tasks and gaming absolutely delightful."},
-    {"category": "Phone", "product_name": "Iphone13", "review": "The 5G capabilities are the true game-changer. Streaming, downloading, or even regular browsing feels like a breeze. It's remarkable how seamless the integration feels, and it's obvious that Apple has invested a lot in refining the experience."},
+    {"id": 1, "category": "Phone", "product_name": "Iphone13", "review": "Amazing battery life and camera quality. Best iPhone yet."},
+    {"id": 2, "category": "Phone", "product_name": "Iphone13", "review": "Stunning design and performance. Apple has done it again."},
+    {"id": 3, "category": "Phone", "product_name": "Iphone13", "review": "The display is just incredible. Love the A15 chip's speed."},
+    {"id": 4, "category": "Phone", "product_name": "Iphone13", "review": "Superb user experience with the new iOS. Seamless and smooth."},
+    {"id": 5, "category": "Phone", "product_name": "Iphone13", "review": "5G capabilities are outstanding. Internet browsing is lightning fast."},
+    {"id": 6, "category": "Phone", "product_name": "Iphone13", "review": "The build quality is top-notch. Feels premium in hand."},
+    {"id": 7, "category": "Phone", "product_name": "Iphone13", "review": "Love the enhanced camera system. Pictures are more vivid."},
+    {"id": 8, "category": "Phone", "product_name": "Iphone13", "review": "Face ID is faster and more responsive."},
+    {"id": 9, "category": "Phone", "product_name": "Iphone13", "review": "Storage options are great. Worth the investment."},
+    {"id": 10, "category": "Phone", "product_name": "Iphone13", "review": "Night mode photos are simply outstanding."},
+    {"id": 11, "category": "Phone", "product_name": "Iphone13", "review": "The ceramic shield front cover is a nice touch."},
+    {"id": 12, "category": "Phone", "product_name": "Iphone13", "review": "Battery life lasts all day even with heavy use."},
+    {"id": 13, "category": "Phone", "product_name": "Iphone13", "review": "Video recording quality is cinema-grade."},
+    {"id": 14, "category": "Phone", "product_name": "Iphone13", "review": "Gaming experience is smooth with no lags."},
+    {"id": 15, "category": "Phone", "product_name": "Iphone13", "review": "Dual eSIM support is a game changer for travelers."},
+    {"id": 16, "category": "Phone", "product_name": "Iphone13", "review": "Stereo speakers produce clear and loud audio."},
+    {"id": 17, "category": "Phone", "product_name": "Iphone13", "review": "MagSafe accessories add to its versatility."},
+    {"id": 18, "category": "Phone", "product_name": "Iphone13", "review": "Water and dust resistance is reliable."},
+    {"id": 19, "category": "Phone", "product_name": "Iphone13", "review": "Graphics and performance are top-tier."},
+    {"id": 20, "category": "Phone", "product_name": "Iphone13", "review": "All-around, the best smartphone on the market."},
 
     # SamsungTV Reviews
-    {"category": "TV", "product_name": "SamsungTV", "review": "Samsung's display technology has always been at the forefront, but with this TV, they've outdone themselves. Every visual is crisp, the colors are vibrant, and the depth of the blacks is simply mesmerizing. The smart features only add to the luxurious viewing experience."},
-    {"category": "TV", "product_name": "SamsungTV", "review": "This isn't just a TV; it's a centerpiece for the living room. The ultra-slim bezels and the sleek design make it a visual treat even when it's turned off. And when it's on, the 4K resolution delivers a cinematic experience right at home."},
-    {"category": "TV", "product_name": "SamsungTV", "review": "The sound quality, often an oversight in many TVs, matches the visual prowess. It creates an enveloping atmosphere that's hard to get without an external sound system. Combined with its user-friendly interface, it's the TV I've always dreamt of."},
+    {"id": 21, "category": "TV", "product_name": "SamsungTV", "review": "Impressive picture clarity and vibrant colors. A top-notch TV."},
+    {"id": 22, "category": "TV", "product_name": "SamsungTV", "review": "Love the smart features and the remote. Simplifies everything."},
+    {"id": 23, "category": "TV", "product_name": "SamsungTV", "review": "Sound quality could be better. Picture is stunning though."},
+    {"id": 24, "category": "TV", "product_name": "SamsungTV", "review": "Connectivity options are plenty and easy to set up."},
+    {"id": 25, "category": "TV", "product_name": "SamsungTV", "review": "Sleek design that complements the living room decor."},
+    {"id": 26, "category": "TV", "product_name": "SamsungTV", "review": "The built-in apps and interface are user-friendly."},
+    {"id": 27, "category": "TV", "product_name": "SamsungTV", "review": "Ambient mode is a nice touch for when not watching."},
+    {"id": 28, "category": "TV", "product_name": "SamsungTV", "review": "Gaming mode offers a fantastic experience with low latency."},
+    {"id": 29, "category": "TV", "product_name": "SamsungTV", "review": "HDR content looks spectacular."},
+    {"id": 30, "category": "TV", "product_name": "SamsungTV", "review": "Remote control with voice command is super convenient."},
+    {"id": 31, "category": "TV", "product_name": "SamsungTV", "review": "Crisp and clear audio, though an external system enhances it."},
+    {"id": 32, "category": "TV", "product_name": "SamsungTV", "review": "Wall mounting was straightforward and secure."},
+    {"id": 33, "category": "TV", "product_name": "SamsungTV", "review": "Streaming apps load quickly and play smoothly."},
+    {"id": 34, "category": "TV", "product_name": "SamsungTV", "review": "Regular software updates keep the TV fresh."},
+    {"id": 35, "category": "TV", "product_name": "SamsungTV", "review": "Multiple HDMI ports allow for various device connections."},
+    {"id": 36, "category": "TV", "product_name": "SamsungTV", "review": "Power consumption is efficient."},
+    {"id": 37, "category": "TV", "product_name": "SamsungTV", "review": "Tizen OS is intuitive and bug-free."},
+    {"id": 38, "category": "TV", "product_name": "SamsungTV", "review": "The contrast ratio and deep blacks are impressive."},
+    {"id": 39, "category": "TV", "product_name": "SamsungTV", "review": "No motion blur during fast-paced scenes."},
+    {"id": 40, "category": "TV", "product_name": "SamsungTV", "review": "Overall, a solid investment for quality viewing."},
 
     # Ergonomic Chair Reviews
-    {"category": "Furniture", "product_name": "Ergonomic Chair", "review": "Shifting to this ergonomic chair was a decision I wish I'd made earlier. Not only does it look sophisticated in its design, but the level of comfort is unparalleled. Long hours at the desk now feel less daunting, and my back is definitely grateful."},
-    {"category": "Furniture", "product_name": "Ergonomic Chair", "review": "The meticulous craftsmanship of this chair is evident. Every component, from the armrests to the wheels, feels premium. The adjustability features mean I can tailor it to my needs, ensuring optimal posture and comfort throughout the day."},
-    {"category": "Furniture", "product_name": "Ergonomic Chair", "review": "I was initially drawn to its aesthetic appeal, but the functional benefits have been profound. The breathable material ensures no discomfort even after prolonged use, and the robust build gives me confidence that it's a chair built to last."},
+    {"id": 41, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Feels really comfortable even after long hours."},
+    {"id": 42, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Assembly was a bit tough, but the comfort is unmatched."},
+    {"id": 43, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Good support for back but wish it had more adjustability."},
+    {"id": 44, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "The material breathes well. No more sweaty backs."},
+    {"id": 45, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Sturdy build and doesn't wobble."},
+    {"id": 46, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "The adjustable armrests are a godsend."},
+    {"id": 47, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Feels like a high-end chair but without the hefty price tag."},
+    {"id": 48, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Rollers are smooth and don't scratch the floor."},
+    {"id": 49, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "The reclining feature is smooth and holds well."},
+    {"id": 50, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Perfect for both office and gaming needs."},
+    {"id": 51, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Height adjustment is fluid and stays in place."},
+    {"id": 52, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "The cushioning is just right - not too soft or too firm."},
+    {"id": 53, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Customer service was helpful with inquiries."},
+    {"id": 54, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Fits well in both professional and casual room settings."},
+    {"id": 55, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "The headrest provides adequate neck support."},
+    {"id": 56, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Maintains good posture even after extended use."},
+    {"id": 57, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "The lumbar support is adjustable and supportive."},
+    {"id": 58, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Easy to clean and maintain."},
+    {"id": 59, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "Quality far surpasses the price."},
+    {"id": 60, "category": "Furniture", "product_name": "Ergonomic Chair", "review": "A great investment for anyone spending hours seated."},
 ]
 
 
+#메모리에만 저장되는 DB생성
 engine = create_engine("sqlite:///:memory:")
 metadata_obj = MetaData()
 
@@ -71,10 +118,16 @@ for row in rows:
         connection.commit()
 
 
+#llm모델 select
+openai.api_key = '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'
+
+llm = OpenAI(temperature=0, model="gpt-3.5-turbo")
+#쿼리변환 모델에 들어갈 디폴트 값
+service_context = ServiceContext.from_defaults(llm=llm)
 
 
 
-
+#RAG이용 질문분해
 def generate_questions(user_query: str) -> List[str]:
   system_message = '''
   You are given with Postgres table with the following columns.
@@ -100,22 +153,22 @@ def generate_questions(user_query: str) -> List[str]:
       ChatMessage(role="system", content=system_message),
       ChatMessage(role="user", content=user_query),
   ]
-  generated_questions = CustomLLM.chat(messages).message.content.split('\n')
+  generated_questions = llm.chat(messages).message.content.split('\n')
 
   return generated_questions
 
+#유저 쿼리 예시
 user_query = "Get the summary of reviews of Iphone13"
 
+#질문나누기(기본쿼리용,심화질문용)
 text_to_sql_query, rag_query = generate_questions(user_query)
 
+#보여주기
+display(HTML(f'<p style="font-size:20px">{text_to_sql_query, rag_query}</p>'))
 
 
-service_context = ServiceContext(
-    model=OpenAI("gpt-3.5-turbo"),
-    organization="org-YRfAQcPdULRiZ9FLQpYTRJjZ",  # OpenAI 조직 ID
-)
 
-
+#txt2sql 하기위한 환경설정
 sql_query_engine = NLSQLTableQueryEngine(
     sql_database=sql_database,
     tables=["product_reviews"],
@@ -123,23 +176,20 @@ sql_query_engine = NLSQLTableQueryEngine(
     service_context=service_context
 )
 
-
-sql_response = sql_query_engine.query(text_to_sql_query)
-
-
+#자연어 쿼리변환
+sql_response = sql_query_engine.query(text_to_sql_query) #
 sql_response_list = ast.literal_eval(sql_response.response)
 text = [' '.join(t) for t in sql_response_list]
 text = ' '.join(text)
+display(HTML(f'<p style="font-size:20px">{sql_response.metadata["sql_query"]}</p>'))
 
-
-listindex = ListIndex([Document(text=text)])
+#2차 질문을 위한 ListIndex설정(rag_query)
+listindex = ListIndex([Document(text=text)]) #
 list_query_engine = listindex.as_query_engine()
 
-response = list_query_engine.query(rag_query)
+summary = list_query_engine.query(rag_query)
 
-print(response.response)
-
-
+display(HTML(f'<p style="font-size:20px">{summary.response}</p>'))
 
 """Function to perform SQL+RAG"""
 

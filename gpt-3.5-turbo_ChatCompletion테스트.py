@@ -1,10 +1,8 @@
 
 import openai
 import os
-openai.organization = "org-YRfAQcPdULRiZ9FLQpYTRJjZ"
-openai.api_key = os.getenv("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")
-openai.Model.list()
-openai.api_key = "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"
+
+openai.api_key = "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"
 def generate_questions(user_query: str) -> list[str]:
     system_message = '''
     You are given with Postgres table with the following columns.
@@ -47,4 +45,5 @@ def generate_questions(user_query: str) -> list[str]:
 
 #main
 
-generate_questions("give me informations about newjeans")
+print(generate_questions("give me informations about newjeans"))
+print("hello")

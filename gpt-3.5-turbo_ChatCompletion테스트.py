@@ -2,7 +2,7 @@
 import openai
 import os
 
-openai.api_key = "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"
+openai.api_key = "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"
 def generate_questions(user_query: str) -> list[str]:
     system_message = '''
     You are given with Postgres table with the following columns.
